@@ -20,3 +20,8 @@ node_modules/
 npm-debug.log
 yarn-error.log
 ###< Node / Frontend ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
