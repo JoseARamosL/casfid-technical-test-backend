@@ -3,27 +3,34 @@
 namespace App\Document;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[MongoDB\Document(collection: 'news')]
 class News
 {
     #[MongoDB\Id]
+    #[Groups(['news:read'])]
     private ?string $id = null;
 
     #[MongoDB\Field(type: 'string')]
+    #[Groups(['news:read'])]
     private string $title;
 
     #[MongoDB\Field(type: 'string')]
     #[MongoDB\UniqueIndex]
+    #[Groups(['news:read'])]
     private string $url;
 
     #[MongoDB\Field(type: 'string', nullable: true)]
+    #[Groups(['news:read'])]
     private ?string $description = null;
 
     #[MongoDB\Field(type: 'date')]
+    #[Groups(['news:read'])]
     private \DateTimeInterface $publishedAt;
 
     #[MongoDB\Field(type: 'string')]
+    #[Groups(['news:read'])]
     private string $source;
 
     public function __construct(string $title, string $url, string $source, \DateTimeInterface $date = null)
