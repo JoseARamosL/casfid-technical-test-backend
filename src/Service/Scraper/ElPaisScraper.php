@@ -20,13 +20,13 @@ class ElPaisScraper implements NewsScraperInterface
         $data = [];
 
         try {
-            // 1. Petición HTTP
+            // Petición HTTP
             $response = $this->client->request('GET', self::URL);
 
-            // 2. Parseo del HTML
+            // Parseo del HTML
             $crawler = new Crawler($response->getContent());
 
-            // 3. Extracción
+            // Extracción
             $articles = $crawler->filter('article')->slice(0, 5);
 
             $articles->each(function (Crawler $node) use (&$data) {
@@ -52,7 +52,7 @@ class ElPaisScraper implements NewsScraperInterface
             });
 
         } catch (\Exception $e) {
-            $this->logger->error('Error scraping El Pais: ' . $e->getMessage());
+            $this->logger->error(sprintf('Error scraping El Pais: %s', $e->getMessage()));
         }
 
         return $data;

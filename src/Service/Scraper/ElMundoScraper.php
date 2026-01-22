@@ -51,7 +51,7 @@ class ElMundoScraper implements NewsScraperInterface
             });
 
         } catch (\Exception $e) {
-            $this->logger->error('Error scraping El Mundo: ' . $e->getMessage());
+            $this->logger->error(sprintf('Error scraping El Mundo: %s', $e->getMessage()));
         }
 
         return $data;
