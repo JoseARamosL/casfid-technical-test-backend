@@ -6,7 +6,7 @@ use App\Document\News;
 use App\Service\Scraper\NewsScraperInterface;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 class NewsService
 {
@@ -14,54 +14,98 @@ class NewsService
     private const MAX_TOTAL_SAVED = 250;
 
     public function __construct(
-        #[TaggedIterator('app.news_scraper')] iterable $scrapers,
+        #[AutowireIterator('app.news_scraper')] iterable $scrapers,
         private DocumentManager $dm,
         private LoggerInterface $logger
     ) {
         $this->scrapers = $scrapers;
     }
 
-    public function fetchAndSaveNews(): int
+    public function fetchAndSaveNews(): array
     {
-        $totalSaved = 0;
+        $globalStats = [
+            'total' => 0,
+            'totalElMundo' => 0,
+            'totalElPais' => 0
+        ];
 
         /** @var NewsScraperInterface $scraper */
         foreach ($this->scrapers as $scraper) {
             try {
                 $this->logger->info(sprintf('Procesando fuente: %s', $scraper->getSource()));
-                $articles = $scraper->scrape();
 
-                foreach ($articles as $articleData) {
-                    // Verificamos duplicados
-                    $exists = $this->dm->getRepository(News::class)->findOneBy(['url' => $articleData['url']]);
+                $scraperStats = $this->saveAndGetNewArticles($scraper);
 
-                    if ($exists) {
-                        continue;
-                    }
-
-                    $news = new News(
-                        $articleData['title'],
-                        $articleData['url'],
-                        $scraper->getSource(),
-                        $articleData['date']
-                    );
-                    $news->setDescription($articleData['description']);
-
-                    $this->dm->persist($news);
-                    $totalSaved++;
-
-                    if ($totalSaved % 250 === 0) {
-                        $this->dm->flush();
-                    }
-                }
-
-                $this->dm->flush();
+                $globalStats['total'] += $scraperStats['total'];
+                $globalStats['totalElMundo'] += $scraperStats['totalElMundo'];
+                $globalStats['totalElPais'] += $scraperStats['totalElPais'];
 
             } catch (\Exception $e) {
                 $this->logger->error(sprintf('Error en %s: %s', $scraper->getSource(), $e->getMessage()));
             }
         }
 
-        return $totalSaved;
+        return $globalStats;
+    }
+
+    private function saveAndGetNewArticles(NewsScraperInterface $scraper): array
+    {
+        $totalSaved = 0;
+        $totalElMundo = 0;
+        $totalElPais = 0;
+
+        try {
+            $articles = $scraper->scrape();
+
+            foreach ($articles as $articleData) {
+                $exists = $this->dm->getRepository(News::class)->findOneBy(['url' => $articleData['url']]);
+
+                if ($exists) {
+                    continue;
+                }
+
+                $newArticle = new News(
+                    $articleData['title'],
+                    $articleData['url'],
+                    $scraper->getSource(),
+                    $articleData['date']
+                );
+
+                if (isset($articleData['description'])) {
+                    $newArticle->setDescription($articleData['description']);
+                }
+
+                $this->dm->persist($newArticle);
+
+                switch ($newArticle->getSource()) {
+                    case 'El Mundo':
+                        $totalElMundo++;
+                        break;
+                    case 'El Pais':
+                    case 'El País':
+                        $totalElPais++;
+                        break;
+                }
+
+                $totalSaved++;
+
+                if ($totalSaved % self::MAX_TOTAL_SAVED === 0) {
+                    $this->dm->flush();
+                }
+            }
+
+            $this->dm->flush();
+
+        } catch (\Exception $e) {
+            // Guardamos lo que tengamos hasta el error
+            $this->dm->flush();
+            $this->logger->error(sprintf('Error en %s: %s', $scraper->getSource(), $e->getMessage()));
+        }
+
+        return [
+            'total' => $totalSaved,
+            'totalElMundo' => $totalElMundo,
+            'totalElPais' => $totalElPais
+        ];
     }
 }

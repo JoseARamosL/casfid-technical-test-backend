@@ -25,9 +25,14 @@ class FetchNewsCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('Iniciando descarga de noticias...');
 
-        $count = $this->newsService->fetchAndSaveNews();
+        $stats = $this->newsService->fetchAndSaveNews();
 
-        $io->success(sprintf('Proceso finalizado. Se han guardado %d noticias nuevas.', $count));
+        $io->success(sprintf(
+            'Proceso finalizado. Total: %d noticias (El Mundo: %d, El País: %d)',
+            $stats['total'],
+            $stats['totalElMundo'],
+            $stats['totalElPais']
+        ));
 
         return Command::SUCCESS;
     }

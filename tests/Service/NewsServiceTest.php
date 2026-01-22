@@ -27,7 +27,8 @@ class NewsServiceTest extends TestCase
                 'date' => new \DateTime()
             ]
         ]);
-        $scraperMock->method('getSource')->willReturn('Fuente Test');
+
+        $scraperMock->method('getSource')->willReturn('El Pais');
 
         $repoMock->method('findOneBy')->willReturn(null);
         $dmMock->method('getRepository')->willReturn($repoMock);
@@ -44,8 +45,11 @@ class NewsServiceTest extends TestCase
             $loggerMock
         );
 
-        $count = $service->fetchAndSaveNews();
+        $stats = $service->fetchAndSaveNews();
 
-        $this->assertEquals(1, $count);
+        $this->assertIsArray($stats);
+        $this->assertEquals(1, $stats['total'], 'El total general debería ser 1');
+        $this->assertEquals(1, $stats['totalElPais'], 'El total de El Pais debería ser 1');
+        $this->assertEquals(0, $stats['totalElMundo'], 'El total de El Mundo debería ser 0');
     }
 }
